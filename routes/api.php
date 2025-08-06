@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Models\Article;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -59,6 +61,34 @@ Route::middleware('auth:sanctum')->group(function () {
                 'can_manage_users' => $user->canManageUsers(),
                 'can_manage_all_articles' => $user->canManageAllArticles(),
                 'can_publish_articles' => $user->canPublishArticles(),
+            ],
+        ]);
+    });
+
+    // Test route to verify Gates and Policies
+    Route::get('/test-permissions', function (Request $request) {
+        $user = $request->user();
+
+        return response()->json([
+            'message' => 'Gates and Policies test',
+            'gates' => [
+                'view-all-users' => $user->can('view-all-users'),
+                'assign-roles' => $user->can('assign-roles'),
+                'create-article' => $user->can('create-article'),
+                'publish-article' => $user->can('publish-article'),
+                'delete-article' => $user->can('delete-article'),
+                'view-published' => $user->can('view-published'),
+                'manage-users' => $user->can('manage-users'),
+                'manage-all-articles' => $user->can('manage-all-articles'),
+                'is-admin' => $user->can('is-admin'),
+                'is-editor' => $user->can('is-editor'),
+                'is-author' => $user->can('is-author'),
+            ],
+            'policies' => [
+                'can_view_any_articles' => $user->can('viewAny', Article::class),
+                'can_create_articles' => $user->can('create', Article::class),
+                'can_view_any_users' => $user->can('viewAny', User::class),
+                'can_create_users' => $user->can('create', User::class),
             ],
         ]);
     });
