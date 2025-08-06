@@ -3,72 +3,46 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Role;
+use App\Http\Helpers\ApiResponse;
+use App\Http\Requests\AssignRoleRequest;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
     /**
      * Display a listing of all users (admin only).
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
         // Check authorization using gate
         if (!Gate::allows('view-all-users')) {
-            return response()->json([
-                'message' => 'Unauthorized. Admin access required.',
-            ], 403);
+            return ApiResponse::forbidden('Admin access required.');
         }
 
         $users = User::with('roles')->paginate(15);
 
-        return response()->json([
-            'message' => 'Users retrieved successfully',
-            'data' => $users,
-        ]);
+        return ApiResponse::paginated($users, 'Users retrieved successfully');
     }
 
     /**
      * Assign role to a user (admin only).
      */
-    public function assignRole(Request $request, int $id): JsonResponse
+    public function assignRole(AssignRoleRequest $request, int $id): JsonResponse
     {
-        // Check authorization using gate
-        if (!Gate::allows('assign-roles')) {
-            return response()->json([
-                'message' => 'Unauthorized. Admin access required.',
-            ], 403);
-        }
-
-        $request->validate([
-            'role' => 'required|string|exists:roles,name',
-        ]);
-
         $user = User::findOrFail($id);
-
-        // Check policy for role assignment
-        if (!$request->user()->can('assignRole', $user)) {
-            return response()->json([
-                'message' => 'Cannot assign roles to this user.',
-            ], 403);
-        }
-
         $roleName = $request->role;
 
         if ($user->assignRole($roleName)) {
-            return response()->json([
-                'message' => "Role '{$roleName}' assigned successfully",
-                'user' => $user->load('roles'),
-            ]);
+            return ApiResponse::success(
+                $user->load('roles'),
+                "Role '{$roleName}' assigned successfully"
+            );
         }
 
-        return response()->json([
-            'message' => 'Failed to assign role',
-        ], 400);
+        return ApiResponse::error('Failed to assign role');
     }
 
     /**
@@ -78,8 +52,7 @@ class UserController extends Controller
     {
         $user = $request->user()->load('roles');
 
-        return response()->json([
-            'message' => 'Profile retrieved successfully',
+        $profileData = [
             'user' => $user,
             'permissions' => [
                 'can_manage_users' => $user->canManageUsers(),
@@ -87,6 +60,8 @@ class UserController extends Controller
                 'can_publish_articles' => $user->canPublishArticles(),
                 'roles' => $user->getRoleNames(),
             ],
-        ]);
+        ];
+
+        return ApiResponse::success($profileData, 'Profile retrieved successfully');
     }
 }
