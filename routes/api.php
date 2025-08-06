@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 // Public authentication routes (no middleware required)
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register-with-role', [AuthController::class, 'registerWithRole']); // Alternative registration
     Route::post('/login', [AuthController::class, 'login']);
 });
 
@@ -40,6 +41,25 @@ Route::middleware('auth:sanctum')->group(function () {
             'message' => 'Authentication successful',
             'user_id' => $request->user()->id,
             'user_name' => $request->user()->name,
+        ]);
+    });
+
+    // Test route to verify role management
+    Route::get('/test-roles', function (Request $request) {
+        $user = $request->user();
+        return response()->json([
+            'message' => 'Role management test',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'roles' => $user->getRoleNames(),
+                'is_admin' => $user->isAdmin(),
+                'is_editor' => $user->isEditor(),
+                'is_author' => $user->isAuthor(),
+                'can_manage_users' => $user->canManageUsers(),
+                'can_manage_all_articles' => $user->canManageAllArticles(),
+                'can_publish_articles' => $user->canPublishArticles(),
+            ],
         ]);
     });
     

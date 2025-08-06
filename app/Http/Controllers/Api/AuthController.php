@@ -26,11 +26,14 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Assign default role (author) to new users
+        $user->assignRole('author');
+
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'User registered successfully',
-            'user' => $user,
+            'user' => $user->load('roles'),
             'access_token' => $token,
             'token_type' => 'Bearer',
         ], 201);
@@ -54,7 +57,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => $user,
+            'user' => $user->load('roles'),
             'access_token' => $token,
             'token_type' => 'Bearer',
         ]);
@@ -67,5 +70,36 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Logged out successfully',
         ]);
+    }
+
+    /**
+     * Register with role selection (alternative method).
+     */
+    public function registerWithRole(Request $request): JsonResponse
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8',
+            'role' => 'required|string|in:author,editor', // Only allow author/editor, not admin
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        // Assign requested role (admin role requires manual assignment)
+        $user->assignRole($request->role);
+
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'User registered successfully',
+            'user' => $user->load('roles'),
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+        ], 201);
     }
 }
