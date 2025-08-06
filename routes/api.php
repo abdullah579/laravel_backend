@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\UserController;
 use App\Models\Article;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -17,27 +19,28 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Public authentication routes (no middleware required)
-Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/register-with-role', [AuthController::class, 'registerWithRole']); // Alternative registration
-    Route::post('/login', [AuthController::class, 'login']);
-});
+// Public routes
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
 
-// Protected routes (require authentication)
+// Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-    
-    // Authentication routes that require token
-    Route::prefix('auth')->group(function () {
-        Route::post('/logout', [AuthController::class, 'logout']);
-        Route::get('/user', function (Request $request) {
-            return response()->json([
-                'user' => $request->user()->load('roles'),
-            ]);
-        });
-    });
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [UserController::class, 'profile']);
 
-    // Test route to verify authentication
+    // User management (admin only)
+    Route::get('/users', [UserController::class, 'index']);
+    Route::post('/users/{id}/assign-role', [UserController::class, 'assignRole']);
+
+    // Articles
+    Route::get('/articles', [ArticleController::class, 'index']);
+    Route::get('/articles/mine', [ArticleController::class, 'mine']);
+    Route::post('/articles', [ArticleController::class, 'store']);
+    Route::put('/articles/{id}', [ArticleController::class, 'update']);
+    Route::delete('/articles/{id}', [ArticleController::class, 'destroy']);
+    Route::patch('/articles/{id}/publish', [ArticleController::class, 'publish']);
+
+    // Test routes (can be removed in production)
     Route::get('/test-auth', function (Request $request) {
         return response()->json([
             'message' => 'Authentication successful',
@@ -46,7 +49,6 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
-    // Test route to verify role management
     Route::get('/test-roles', function (Request $request) {
         $user = $request->user();
         return response()->json([
@@ -65,7 +67,6 @@ Route::middleware('auth:sanctum')->group(function () {
         ]);
     });
 
-    // Test route to verify Gates and Policies
     Route::get('/test-permissions', function (Request $request) {
         $user = $request->user();
 
@@ -91,19 +92,5 @@ Route::middleware('auth:sanctum')->group(function () {
                 'can_create_users' => $user->can('create', User::class),
             ],
         ]);
-    });
-    
-    Route::prefix('users')->group(function () {
-        
-    });
-
-    
-    Route::prefix('articles')->group(function () {
-        
-    });
-
-    
-    Route::prefix('roles')->group(function () {
-        
     });
 });
